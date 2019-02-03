@@ -56,13 +56,8 @@ class Reservation(View):
             return JsonResponse(response, safe= True)
         except Exception as e:
             return JsonResponse({'message': e.__str__()})
-
-    def put(self, request, *args, **kwargs):
-        pass
-
-    def patch(self, request, *args, **kwargs):
-        pass
-
+			
+			
     @staticmethod
     def make_reservation(user_id, available_spots):
         user = User.objects.get(id=user_id)

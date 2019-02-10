@@ -1,12 +1,12 @@
 from django.http import JsonResponse
-from django.http import HttpResponse
-from django.views import  View
+from django.views import View
 from reservation.models import Reservations, User, ParkingSpots
 import json
 from streetparkingspotreservation.logger import log
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import math, decimal
+from reservation import  utils
 
 
 class Reservation(View):
@@ -33,14 +33,22 @@ class Reservation(View):
         json_data = json.loads(data)
         available_spots = ParkingLocations.get_available_parking_spots()
         if available_spots:
-            reservation = Reservation.make_reservation(json_data["user_id"], available_spots)
-            response = {"id" : reservation.id,
+            reservation = Reservation.make_reservation(json_data, available_spots)
+            if not reservation:
+                response= {"Status" : "user not found"}
+                return JsonResponse(response, status=400)
+            response = {"reservation_id" : reservation.id,
                         "user_id" : reservation.user_id.id ,
-                        "parking_spot" : reservation.parking_spot.id}
+                        "parking_spot_id" : reservation.parking_spot.id,
+                        "reservation_starts" : reservation.reservation_starts,
+                        "reservation_ends": reservation.reservation_ends,
+                        "reservation_cost": reservation.reservation_cost
+
+                        }
             return JsonResponse(response, safe=False)
         else:
             response = {"Status" : False,
-                        "message" : "No availabe spots, please try aganin some time!!!"}
+                        "message" : "No available spots, please try again some time!!!"}
             return JsonResponse(response, safe=False)
 
     def delete(self, request):
@@ -56,17 +64,28 @@ class Reservation(View):
             return JsonResponse(response, safe= True)
         except Exception as e:
             return JsonResponse({'message': e.__str__()})
-			
-			
+
     @staticmethod
-    def make_reservation(user_id, available_spots):
-        user = User.objects.get(id=user_id)
-        log.info("making reservations for user id : {0}".format(user.id))
-        available = available_spots[0]
-        available.reserved = True
-        available.save()
-        reservation = Reservations.objects.create(user_id=user, parking_spot=available)
-        return reservation
+    def make_reservation(json_data, available_spots):
+        try:
+            booking_starttime = utils.get_booking_starttime(json_data["from"])
+            booking_end_time = utils.get_booking_endtime(booking_starttime, json_data["duration"])
+            booking_cost = utils.get_booking_cost(json_data["duration"])
+            user = User.objects.get(id=json_data['user_id'])
+            log.info("making reservations for user id : {0}".format(user.id))
+            available = available_spots[0]
+            available.reserved = True
+            available.save()
+            reservation = Reservations.objects.create(user_id=user,
+                                                      parking_spot=available,
+                                                      reservation_starts=booking_starttime,
+                                                      reservation_ends=booking_end_time,
+                                                      reservation_cost=booking_cost
+                                         )
+            return reservation
+        except Exception as e:
+            log.error(e.__str__())
+            return None
 
     @staticmethod
     def get_all_reservations():
@@ -102,7 +121,6 @@ class ParkingLocations(View):
                 lat = decimal.Decimal(json_data["lat"])
                 lng = decimal.Decimal(json_data["lng"])
                 radius = decimal.Decimal(json_data["radius"])
-
                 park_spots = ParkingSpots.objects.filter(reserved=False, lat__lte=lat)
                 print (park_spots)
                 nearest = list(filter(lambda x: radius >= math.hypot(x.lat - lat, x.lng - lng), park_spots))

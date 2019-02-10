@@ -34,7 +34,14 @@ Requirements:
 * Make a reservation for user 
     
             POST /reservation/reservation/
-            Json body = {"user_id" : 5}
+            Json body = {"user_id" : 15, 
+                         "duration" : 2,
+                         "from" : { 
+                            "hour" : 4,"
+                            "minutes" : 30,
+                            "period" : "AM"
+                            }
+                         }
         
 * Cancel a reservation
 

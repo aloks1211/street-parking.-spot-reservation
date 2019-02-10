@@ -2,10 +2,21 @@ version: '3'
 
 services:
   django:
+    restart: always
     build: ./streetparkingspotreservation
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./streetparkingspotreservation:/app/streetparkingspotreservation
     ports:
       - "8000:8000"
+    links:
+      - memcached:memcached
+
+  memcached:
+    image: memcached
+    ports:
+      - "11211:11211"
+    entrypoint:
+      - memcached
+      - -m 64
 

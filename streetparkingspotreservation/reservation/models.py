@@ -1,7 +1,5 @@
 from django.db import models
 
-# Create your models here.
-
 
 class User(models.Model):
     first_name = models.CharField(max_length=128, default=None)
@@ -24,7 +22,9 @@ class ParkingSpots(models.Model):
 class Reservations(models.Model):
     user_id = models.ForeignKey(User,on_delete=models.CASCADE)
     parking_spot = models.ForeignKey(ParkingSpots, on_delete=models.CASCADE)
-
+    reservation_starts = models.DateTimeField(default=None)
+    reservation_ends = models.DateTimeField(default=None)
+    reservation_cost = models.IntegerField(default=0)
 
 
 
